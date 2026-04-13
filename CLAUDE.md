@@ -87,19 +87,22 @@ docker exec awareness-postgres psql -U awareness -d postgres -c "DROP DATABASE a
 
 Labels signal handoffs between Dev, QA, and maintainer. A PR must never have conflicting labels (e.g., both QA Approved and Ready for QA).
 
-### Labels
+### Label ownership
 
-| Label | Owner | Meaning |
-|-------|-------|---------|
-| **Dev Active** | Dev | Developer is actively working — QA should not start |
-| **Awaiting CI** | Automated | Pushed commits awaiting CI results |
-| **Ready for QA** | Automated | CI passed — QA can begin review |
-| **QA Active** | QA | QA is actively reviewing — Dev should not push |
-| **QA Invalidated** | Automated | Dev pushed while QA was active — QA should stop |
-| **Ready for QA Signoff** | QA | QA passed, zero findings, CI green — awaiting maintainer |
-| **QA Failed** | QA | QA found issues — Dev needs to fix |
-| **QA Approved** | Maintainer | Maintainer signed off — merge gate satisfied |
-| **merge-order: 0–3** | Dev | Controls merge sequencing within a batch |
+Who applies what -- honor these boundaries:
+
+| Label | QA | Dev | Maintainer | Automation |
+|-------|:--:|:---:|:----------:|:----------:|
+| **Dev Active** | | add/remove | | |
+| **Awaiting CI** | | | | `pr-labels.yml` on push |
+| **Ready for QA** | | re-apply after fix | | `pr-labels-ci.yml` on CI pass |
+| **QA Active** | add/remove | | | |
+| **QA Invalidated** | | | | `pr-labels.yml` on push during QA Active |
+| **Ready for QA Signoff** | add | | | |
+| **QA Failed** | add | | | |
+| **QA Approved** | **never** | **never** | **only maintainer** | |
+| **CI Failed** | | | | `pr-labels-ci.yml` on CI fail |
+| **merge-order: 0--3** | | add | | |
 
 ### State machine
 
@@ -129,9 +132,15 @@ Dev Active → Awaiting CI → Ready for QA → QA Active
 
 **Never apply QA Approved.** Only the maintainer does that.
 
+**QA's label scope is limited to:** `QA Active` (add at start, remove at end), `Ready for QA Signoff` (pass), `QA Failed` (fail). Don't touch `Dev Active`, `Awaiting CI`, `merge-order`, or any non-workflow labels (`bug`, `enhancement`, `security`, etc.).
+
 ## Conventions
 
 - **Release PRs** do not need QA sections — the code was already tested in feature PRs
 - Post findings as numbered items with severity (blocker, substantive, observation, nit)
 - Always verify fixes in a second round before approving
 - Test count in PR body should match actual `pytest` output — flag discrepancies
+- Run each PR checkbox test individually — don't rely solely on the full suite passing
+- When reviewing format/restructure changes, verify no input data is silently dropped — test edge cases where first row has the same type as data rows
+- When a PR says `Closes #N`, verify the PR covers everything the issue specified, not just that the diff is internally correct
+- Version bumps, tags, and releases must go through the PR pipeline like any other change — flag direct-to-main pushes
