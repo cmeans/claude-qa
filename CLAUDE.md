@@ -143,19 +143,17 @@ Dev:
 add_context(
     source="claude-qa",
     tags=["pr-notify", "{repo}"],
-    description="PR #{num}: qa-failed",
-    expires_days=1,
-    content=json.dumps({
-        "event": "qa-failed",
-        "repo": "cmeans/{repo}",
-        "pr_number": <number>,
-        "pr_title": "<title>",
-        "branch": "<branch>",
-        "summary": "Brief summary of findings (e.g., '3 findings: missing edge case test, typo in docstring, unused import')"
-    }),
-    learned_from="claude-code"
+    description=(
+        f"PR #{pr_number}: qa-failed — {pr_title} "
+        f"| branch: {branch} "
+        f"| summary: {findings_summary}"
+    ),
+    expires_days=1
 )
 ```
+
+Example description:
+`"PR #68: qa-failed — fix: escape HTML cells | branch: fix/xss | summary: 3 findings: missing edge case test, typo in docstring, unused import"`
 
 The 1-minute `/loop` cron (defined in global CLAUDE.md) watches for
 `ready-for-qa` notifications from Dev. When one arrives, report it to the user
