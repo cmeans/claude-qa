@@ -134,6 +134,33 @@ Dev Active → Awaiting CI → Ready for QA → QA Active
 
 **QA's label scope is limited to:** `QA Active` (add at start, remove at end), `Ready for QA Signoff` (pass), `QA Failed` (fail). Don't touch `Dev Active`, `Awaiting CI`, `merge-order`, or any non-workflow labels (`bug`, `enhancement`, `security`, etc.).
 
+### PR notifications via Awareness
+
+When you fail a PR and apply `QA Failed`, write a `pr-notify` entry to alert
+Dev:
+
+```python
+add_context(
+    source="claude-qa",
+    tags=["pr-notify", "{repo}"],
+    description="PR #{num}: qa-failed",
+    expires_days=1,
+    content=json.dumps({
+        "event": "qa-failed",
+        "repo": "cmeans/{repo}",
+        "pr_number": <number>,
+        "pr_title": "<title>",
+        "branch": "<branch>",
+        "summary": "Brief summary of findings (e.g., '3 findings: missing edge case test, typo in docstring, unused import')"
+    }),
+    learned_from="claude-code"
+)
+```
+
+The 1-minute `/loop` cron (defined in global CLAUDE.md) watches for
+`ready-for-qa` notifications from Dev. When one arrives, report it to the user
+and begin the QA review workflow.
+
 ## Conventions
 
 - **Release PRs** do not need QA sections — the code was already tested in feature PRs
