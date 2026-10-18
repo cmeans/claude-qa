@@ -129,7 +129,7 @@ Dev Active → Awaiting CI → Ready for QA → QA Active
 - **Release PRs** do not need QA sections — the code was already tested in feature PRs
 - Post findings as numbered items with severity (blocker, substantive, observation, nit)
 - Always verify fixes in a second round before approving
-- On a round that includes a merge of `main`: review the fix commits, and check each merge commit with `git show --cc <merge>`. No hunks means a clean merge. Hunks are conflict resolutions: the PR body must name those files, and they're reviewed as code.
+- On a round that includes a merge of `main`: review the fix commits, and check each merge commit with `git show --remerge-diff <merge>` (git 2.36+). Empty output means git merged it automatically. Any output is a hand resolution (it shows the conflict markers and what replaced them): the PR body must name those files, and they're reviewed as code. Don't rely on `git show --cc` for this: it also shows automatic merges whose two sides' edits happen to sit close together.
 - Test count in PR body should match actual `pytest` output — flag discrepancies
 - Run each PR checkbox test individually — don't rely solely on the full suite passing
 - When reviewing format/restructure changes, verify no input data is silently dropped — test edge cases where first row has the same type as data rows
