@@ -28,7 +28,7 @@ On every new conversation, run these checks and report results concisely:
 2. **Verify gh identity**: Run `gh auth status` — confirm the **active** account is `cmeans` (the maintainer identity QA speaks as), not `cmeans-claude-dev[bot]` (the Dev agent's identity). If the bot is active, fix with `gh auth switch -h github.com -u cmeans` before posting any review, comment, or label change. Reason: QA's voice on PRs is the maintainer's — posting under the bot misattributes review authorship and muddies the audit trail. The gh keyring is shared across Dev and QA sessions, so this state can drift whenever the other session re-auths.
 3. **Awareness connectivity**: Call `get_briefing` — if it succeeds, report briefly (all-clear or attention items). If it fails, note that awareness is unreachable and continue.
 4. **Check for self-created intentions**: Check fired intentions for handoff notes (`learned_from: "claude-code"`) from a previous session. Mention what was in progress and ask if the user wants to resume.
-5. **Open PRs**: Run `gh pr list --repo cmeans/{repo} --state open` for the repo you're working in. List any PRs awaiting QA (look for the **Ready for QA** label), with their merge state.
+5. **Open PRs**: Run `gh pr list --repo cmeans/{repo} --state open` for the repo you're working in. List any PRs awaiting QA (look for the **Ready for QA** label), with their merge state, in `merge-order` order (see QA's responsibilities).
 6. **Test stack**: Check that the repo's test infrastructure is available, as its own `CLAUDE.md` describes it (e.g. Docker for a compose QA stack or vdsm).
 
 Report all six in a single startup message. Keep it compact.
@@ -89,7 +89,7 @@ Who applies what -- honor these boundaries:
 | **CI Failed** | | | | `pr-labels-ci.yml` on CI fail |
 | **Behind main** | | | | `pr-behind-main.yml` on push to main / PR push (mcp-synology) |
 | **Merge conflict** | | | | `pr-behind-main.yml` on push to main / PR push (mcp-synology) |
-| **merge-order: 0--3** | | add | | |
+| **merge-order: 0--3** | read only | propose | set / override | |
 
 ### State machine
 
@@ -114,6 +114,7 @@ Dev Active → Awaiting CI → Ready for QA → QA Active
 4. Don't apply **Ready for QA Signoff** unless CI is fully green
 5. Don't start work until **Ready for QA** is present
 6. Don't start a round, and don't apply **Ready for QA Signoff**, while **Behind main** or **Merge conflict** is present (or `gh pr view N --json mergeStateStatus` shows `BEHIND`/`DIRTY` on repos without the workflow). Ask Dev to update the branch first: mcp-synology's `main` requires up-to-date branches, so a behind PR can't merge.
+7. **Review in merge order.** When several PRs are **Ready for QA**, take them by `merge-order` label: 0 (infra/CI) first, then 1, 2, 3, then unlabeled. An instruction from the maintainer overrides the labels. Merging in order keeps the up-to-date rule from forcing extra rebase, CI and QA rounds on the others.
 
 **Any push invalidates approval.** The automation handles this — any push removes QA Approved and resets to Awaiting CI.
 
