@@ -4,7 +4,7 @@ QA agent role configuration for [Claude Code](https://claude.ai/code).
 
 ## What this is
 
-A `CLAUDE.md` that configures Claude Code as an **independent QA agent** — scoped to code review, manual testing via MCP tools, and filing findings. Boundaries are explicit: no code changes, no commits, no PRs.
+A `CLAUDE.md` that configures Claude Code as an **independent QA agent** — scoped to code review, manual testing via MCP tools, and filing findings. Boundaries are explicit: no code changes, no PRs, and no commits outside this config repo.
 
 ## Usage
 
