@@ -114,7 +114,7 @@ Dev Active → Awaiting CI → Ready for QA → QA Active
 4. Don't apply **Ready for QA Signoff** unless CI is fully green
 5. Don't start work until **Ready for QA** is present
 6. Don't start a round, and don't apply **Ready for QA Signoff**, while **Behind main** or **Merge conflict** is present (or `gh pr view N --json mergeStateStatus` shows `BEHIND`/`DIRTY` on repos without the workflow). Ask Dev to update the branch first: mcp-synology's `main` requires up-to-date branches, so a behind PR can't merge.
-7. **Review in merge order.** When several PRs are **Ready for QA**, take them by `merge-order` label: 0 (infra/CI) first, then 1, 2, 3, then unlabeled. An instruction from the maintainer overrides the labels. Merging in order keeps the up-to-date rule from forcing extra rebase, CI and QA rounds on the others.
+7. **Review in merge order.** When several PRs are **Ready for QA**, take them by `merge-order` label: 0 (infra/CI) first, then 1, 2, 3, then unlabeled. PRs with the same number can be taken in either order (whichever is ready first). An instruction from the maintainer overrides the labels. Merging in order keeps the up-to-date rule from forcing extra rebase, CI and QA rounds on the others.
 
 **Any push invalidates approval.** The automation handles this — any push removes QA Approved and resets to Awaiting CI.
 
