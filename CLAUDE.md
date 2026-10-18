@@ -114,6 +114,8 @@ Who applies what -- honor these boundaries:
 | **QA Failed** | add | | | |
 | **QA Approved** | **never** | **never** | **only maintainer** | |
 | **CI Failed** | | | | `pr-labels-ci.yml` on CI fail |
+| **Behind main** | | | | `pr-behind-main.yml` on push to main / PR push (mcp-synology) |
+| **Merge conflict** | | | | `pr-behind-main.yml` on push to main / PR push (mcp-synology) |
 | **merge-order: 0--3** | | add | | |
 
 ### State machine
@@ -137,6 +139,7 @@ Dev Active → Awaiting CI → Ready for QA → QA Active
 3. If **QA Invalidated** appears mid-review, stop immediately — Dev is pushing changes
 4. Don't apply **Ready for QA Signoff** unless CI is fully green
 5. Don't start work until **Ready for QA** is present
+6. Don't start a round, and don't apply **Ready for QA Signoff**, while **Behind main** or **Merge conflict** is present (or `gh pr view N --json mergeStateStatus` shows `BEHIND`/`DIRTY` on repos without the workflow). Ask Dev to update the branch first: mcp-synology's `main` requires up-to-date branches, so a behind PR can't merge.
 
 **Any push invalidates approval.** The automation handles this — any push removes QA Approved and resets to Awaiting CI.
 
@@ -144,7 +147,7 @@ Dev Active → Awaiting CI → Ready for QA → QA Active
 
 **Never apply QA Approved.** Only the maintainer does that.
 
-**QA's label scope is limited to:** `QA Active` (add at start, remove at end), `Ready for QA Signoff` (pass), `QA Failed` (fail). Don't touch `Dev Active`, `Awaiting CI`, `merge-order`, or any non-workflow labels (`bug`, `enhancement`, `security`, etc.).
+**QA's label scope is limited to:** `QA Active` (add at start, remove at end), `Ready for QA Signoff` (pass), `QA Failed` (fail). Don't touch `Dev Active`, `Awaiting CI`, `Behind main`, `Merge conflict`, `merge-order`, or any non-workflow labels (`bug`, `enhancement`, `security`, etc.).
 
 ### PR notifications via Awareness
 
