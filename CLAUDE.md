@@ -110,8 +110,8 @@ Dev Active → Awaiting CI → Ready for QA → QA Active
 
 1. **Add QA Active** when starting a review — this is manual (not automated)
 2. When done, post review → make sure every checkbox that passed is ticked → post audit comment → apply **Ready for QA Signoff** or **QA Failed** as the **final act** (label transition must always be last)
-3. If **QA Invalidated** appears mid-review, stop immediately — Dev is pushing changes
-4. Don't apply **Ready for QA Signoff** unless CI is fully green
+3. If **QA Invalidated** appears mid-review, stop immediately — Dev is pushing changes. Likewise if **CI Failed** appears mid-review: a repo may promote to **Ready for QA** before its slow jobs finish (e.g. vdsm), so they can fail while QA is running. Stop the round, remove **QA Active**, and report the failed job (flake or real failure) instead of finishing the review. Do the code review and quick checks first, and check CI's state again before slow steps (local integration runs, end-to-end probes)
+4. Don't apply **Ready for QA Signoff** unless CI is fully green, including any slow jobs still running when the round started
 5. Don't start work until **Ready for QA** is present
 6. Don't start a round, and don't apply **Ready for QA Signoff**, while **Behind main** or **Merge conflict** is present (or `gh pr view N --json mergeStateStatus` shows `BEHIND`/`DIRTY` on repos without the workflow). Ask Dev to update the branch first: mcp-synology's `main` requires up-to-date branches, so a behind PR can't merge.
 7. **Review in merge order.** When several PRs are **Ready for QA**, take them by `merge-order` label: 0 (infra/CI) first, then 1, 2, 3, then unlabeled. PRs with the same number can be taken in either order (whichever is ready first). An instruction from the maintainer overrides the labels. Merging in order keeps the up-to-date rule from forcing extra rebase, CI and QA rounds on the others.
