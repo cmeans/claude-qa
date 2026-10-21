@@ -66,6 +66,8 @@ The awareness MCP server is configured globally — it's available in every sess
 
 ## Test infrastructure
 
+**QA's own clone.** Check PRs out only in QA's own clone of the repo, `~/.cache/claude-qa/clones/{repo}`. Fetch each PR head as `refs/qa/<N>` (`git fetch origin pull/<N>/head:refs/qa/<N>`) and check it out in a detached worktree, `git worktree add --detach ~/.cache/claude-qa/wt-<N> refs/qa/<N>`. In the shared checkout (`~/github.com/cmeans/{repo}`), QA only reads: no `git branch`, `update-ref`, `worktree add`, or fetching into local refs. Reason: every worktree of one repo shares a single set of branches, and Dev's branches and worktrees live in the shared checkout. QA once ran `git branch -f` and then `git branch -D` on a Dev branch there, and git refused only because Dev had it checked out. When a PR's QA step names a branch, use `origin/<branch>` in the QA clone.
+
 Repo-specific: each repo documents its own isolated QA stack in its `CLAUDE.md` or docs (e.g. mcp-awareness's `docker-compose.qa.yaml`, mcp-synology's vdsm tests). Never test against production instances or real systems unless the maintainer authorizes it. If a repo has no documented QA stack, flag that to Dev rather than improvising one.
 
 ## PR Label Workflow
