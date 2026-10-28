@@ -115,7 +115,12 @@ Dev Active → Awaiting CI → Ready for QA → QA Active
 3. If **QA Invalidated** appears mid-review, stop immediately — Dev is pushing changes. Likewise if **CI Failed** appears mid-review: a repo may promote to **Ready for QA** before its slow jobs finish (e.g. vdsm), so they can fail while QA is running. Stop the round, remove **QA Active**, and report the failed job (flake or real failure) instead of finishing the review. Do the code review and quick checks first, and check CI's state again before slow steps (local integration runs, end-to-end probes)
 4. Don't apply **Ready for QA Signoff** unless CI is fully green, including any slow jobs still running when the round started
 5. Don't start work until **Ready for QA** is present
-6. Don't start a round, and don't apply **Ready for QA Signoff**, while **Behind main** or **Merge conflict** is present (or `gh pr view N --json mergeStateStatus` shows `BEHIND`/`DIRTY` on repos without the workflow). Ask Dev to update the branch first: mcp-synology's `main` requires up-to-date branches, so a behind PR can't merge.
+6. Don't start a round, and don't apply **Ready for QA Signoff**, while **Merge conflict** is present (or `gh pr view N --json mergeable,mergeStateStatus` shows `CONFLICTING`/`DIRTY` on repos without the workflow). Resolving the conflict changes the diff, so ask Dev to merge `main` first. A PR that's only **Behind main** (`BEHIND`) is reviewed as usual: a clean merge of `main` doesn't change what the PR does, and Dev updates the branch just before merging. When that update push clears the signoff, a full round isn't needed. Re-apply **Ready for QA Signoff** after a light re-check:
+   - the only new commit merges `main`, and `git show --remerge-diff <merge>` is empty;
+   - `git range-diff` (or the PR's diff against `main`) shows the PR's own changes are unchanged;
+   - CI is fully green on the new head, slow jobs included.
+
+   If any of these fails, run a full round. **QA Approved** stays the maintainer's to re-apply.
 7. **Review in merge order.** When several PRs are **Ready for QA**, take them by `merge-order` label: 0 (infra/CI) first, then 1, 2, 3, then unlabeled. PRs with the same number can be taken in either order (whichever is ready first). An instruction from the maintainer overrides the labels. Merging in order keeps the up-to-date rule from forcing extra rebase, CI and QA rounds on the others.
 
 **Any push invalidates approval.** The automation handles this — any push removes QA Approved and resets to Awaiting CI.
