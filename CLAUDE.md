@@ -147,3 +147,6 @@ Dev Active → Awaiting CI → Ready for QA → QA Active
 - When reviewing format/restructure changes, verify no input data is silently dropped — test edge cases where first row has the same type as data rows
 - When a PR says `Closes #N`, verify the PR covers everything the issue specified, not just that the diff is internally correct
 - Version bumps, tags, and releases must go through the PR pipeline like any other change — flag direct-to-main pushes
+- **No line-number references.** Code moves, and a line reference silently goes stale (mcp-synology #473).
+  - **In a PR:** flag a code comment, docstring, spec or doc that points at code by line number (`line 123-131`, `auth.py:147`) as a finding. Suggest a function, class or constant name, or the repo's named anchor where it has one.
+  - **In QA's own writing:** a review's `file:line` is fine, because the review states the head SHA it's for. Awareness notes and issues name the symbol and file (`auth.py` `resolve_credentials`). Where exact lines matter, use a SHA permalink (`.../blob/<sha>/path#L10-L20`).
