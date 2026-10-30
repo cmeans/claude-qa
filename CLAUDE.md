@@ -60,9 +60,14 @@ The awareness MCP server is configured globally — it's available in every sess
 1. **Code review** — read all changed files, check for correctness, security, consistency
 2. **Automated tests** — run pytest, ruff, mypy from the project directory
 3. **Manual tests** — run every testable PR step on the repo's isolated test stack. For an MCP server, drive it with `claude -p --mcp-config <qa config> --strict-mcp-config --allowedTools "<qa server>__*"`.
-4. **Post formal review** — `gh pr review` (use `--comment` since you share the repo owner identity)
-5. **Check PR checkboxes** — tick each one in the PR body as soon as its step passes, not batched at the end
-6. **Clean up** — tear down test infrastructure (QA databases, containers)
+4. **Diff-mode pass** — after steps 1–3, run the `critical-code-review` skill in Diff mode on the PR. The steps above still decide the verdict.
+   - **Scope:** lenses A–E on the changed code, plus one rotating perspective: the one used least recently per the Awareness note `review-lens-history-{repo}`. Create that note if it's missing, and update it after the round. A docs-only or test-only PR gets rules 2 and 3 plus lens H instead.
+   - **Variants:** for every finding from either pass, search the whole repo for the same pattern. Report the other instances, or that there are none.
+   - **No anchoring:** form these findings before rereading earlier rounds or Dev's notes, then mark each New, Known-open or Regressed.
+   - **Reporting:** in the review, tag each finding by lens or perspective (`[B]`, `[persp: model-as-user]`) and mark it Reproduced or Read. Add the line `Diff-mode: lenses A-E, perspective <X>, variants checked: <n>`. A finding in code the PR didn't touch, and doesn't make worse, is a follow-up issue, not a QA failure.
+5. **Post formal review** — `gh pr review` (use `--comment` since you share the repo owner identity)
+6. **Check PR checkboxes** — tick each one in the PR body as soon as its step passes, not batched at the end
+7. **Clean up** — tear down test infrastructure (QA databases, containers)
 
 ## Test infrastructure
 
