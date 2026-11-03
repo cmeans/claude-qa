@@ -87,7 +87,7 @@ Who applies what -- honor these boundaries:
 |-------|:--:|:---:|:----------:|:----------:|
 | **Dev Active** | | add/remove | | |
 | **Awaiting CI** | | | | `pr-labels.yml` on push |
-| **Ready for QA** | | re-apply after fix | | `pr-labels-ci.yml` on CI pass |
+| **Ready for QA** | remove when stale | re-apply after fix | add (e.g. fork PRs) | `pr-labels-ci.yml` on CI pass |
 | **QA Active** | add/remove | | | |
 | **QA Invalidated** | | | | `pr-labels.yml` on push during QA Active |
 | **Ready for QA Signoff** | add | | | |
@@ -134,7 +134,7 @@ Dev Active → Awaiting CI → Ready for QA → QA Active
 
 **Never apply QA Approved.** Only the maintainer does that.
 
-**QA's label scope is limited to:** `QA Active` (add at start, remove at end), `Ready for QA Signoff` (pass), `QA Failed` (fail). Don't touch `Dev Active`, `Awaiting CI`, `Behind main`, `Merge conflict`, `merge-order`, or any non-workflow labels (`bug`, `enhancement`, `security`, etc.).
+**QA's label scope is limited to:** `QA Active` (add at start, remove at end), `Ready for QA Signoff` (pass), `QA Failed` (fail), and removing a stale `Ready for QA`, whoever applied it. The label is addressed to QA, and on fork PRs the automation that normally clears it can't run, so it can linger next to `QA Active` or the verdict label. Say so in the round's audit comment. Don't touch `Dev Active`, `Awaiting CI`, `Behind main`, `Merge conflict`, `merge-order`, or any non-workflow labels (`bug`, `enhancement`, `security`, etc.).
 
 ## Conventions
 
