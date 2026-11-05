@@ -61,7 +61,7 @@ The awareness MCP server is configured globally — it's available in every sess
 2. **Automated tests** — run pytest, ruff, mypy from the project directory
 3. **Manual tests** — run every testable PR step on the repo's isolated test stack. For an MCP server, drive it with `claude -p --mcp-config <qa config> --strict-mcp-config --allowedTools "<qa server>__*"`.
 4. **Diff-mode pass** — after steps 1–3, run the `critical-code-review` skill in Diff mode on the PR. The steps above still decide the verdict.
-   - **Scope:** lenses A–E on the changed code, plus one rotating perspective: the one used least recently per the Awareness note `review-lens-history-{repo}`. Create that note if it's missing, and update it after the round. A docs-only or test-only PR gets rules 2 and 3 plus lens H instead.
+   - **Scope:** lenses A–E on the changed code, plus one rotating perspective: the one used least recently per the Awareness note `review-lens-history-{repo}`. Create that note if it's missing, and after the round append one line to it directly, not to an expiring entry (maintainer, 2026-11-05). Append only: never rewrite others' lines. If its description names a continuation note, read and append there. A docs-only or test-only PR gets rules 2 and 3 plus lens H instead.
    - **Variants:** for every finding from either pass, search the whole repo for the same pattern. Report the other instances, or that there are none.
    - **No anchoring:** form these findings before rereading earlier rounds or Dev's notes, then mark each New, Known-open or Regressed.
    - **Reporting:** in the review, tag each finding by lens or perspective (`[B]`, `[persp: model-as-user]`) and mark it Reproduced or Read. Add the line `Diff-mode: lenses A-E, perspective <X>, variants checked: <n>`. A finding in code the PR didn't touch, and doesn't make worse, is a follow-up issue, not a QA failure.
@@ -87,7 +87,7 @@ Who applies what -- honor these boundaries:
 |-------|:--:|:---:|:----------:|:----------:|
 | **Dev Active** | | add/remove | | |
 | **Awaiting CI** | | | | `pr-labels.yml` on push |
-| **Ready for QA** | remove when stale | re-apply after fix | add (e.g. fork PRs) | `pr-labels-ci.yml` on CI pass |
+| **Ready for QA** | remove when stale | re-apply after fix | add (e.g. fork PRs) | `pr-labels-ci.yml` on CI pass; `pr-labels-recheck.yml` on a schedule (mcp-synology) |
 | **QA Active** | add/remove | | | |
 | **QA Invalidated** | | | | `pr-labels.yml` on push during QA Active |
 | **Ready for QA Signoff** | add | | | |
@@ -96,7 +96,7 @@ Who applies what -- honor these boundaries:
 | **CI Failed** | | | | `pr-labels-ci.yml` on CI fail |
 | **Behind main** | | | | `pr-behind-main.yml` on push to main / PR push (mcp-synology) |
 | **Merge conflict** | | | | `pr-behind-main.yml` on push to main / PR push (mcp-synology) |
-| **merge-order: 0--3** | read only | propose | set / override | |
+| **merge-order: N** (0--6 on mcp-synology, 0--3 on mcp-clipboard and mcp-awareness) | read only | apply as a proposal, with a PR comment | set / override | |
 
 ### State machine
 
@@ -112,6 +112,7 @@ Dev Active → Awaiting CI → Ready for QA → QA Active
 - CI passes (`pr-labels-ci.yml`) → promotes **Awaiting CI** → **Ready for QA** (a repo may hold this for slower jobs; see its `CLAUDE.md`); CI fails → **CI Failed**.
 - Label added (`pr-labels.yml`) → cleans up labels that no longer apply (e.g., **QA Active** removes **Ready for QA**).
 - A fix that needs no push (a PR body edit) goes back to **Ready for QA** by Dev re-applying it.
+- Every 15 minutes (`pr-labels-recheck.yml`, mcp-synology; GitHub can delay it) → settles open PRs on **Awaiting CI** or **CI Failed** from their checks, for when GitHub's listings lag behind the last CI event. If a result is still missing 30 minutes after a PR's runs finished, it comments once per commit. It also labels a same-repository, non-draft PR left with no workflow label, so removing a PR's last workflow label doesn't hold it, and one QA leaves with none can return at **Ready for QA**. **Dev Active** holds a PR.
 
 ### QA's responsibilities
 
@@ -126,7 +127,7 @@ Dev Active → Awaiting CI → Ready for QA → QA Active
    - CI is fully green on the new head, slow jobs included.
 
    If any of these fails, run a full round. **QA Approved** stays the maintainer's to re-apply.
-7. **Review in merge order.** When several PRs are **Ready for QA**, take them by `merge-order` label: 0 (infra/CI) first, then 1, 2, 3, then unlabeled. PRs with the same number can be taken in either order (whichever is ready first). An instruction from the maintainer overrides the labels. Merging in order keeps the up-to-date rule from forcing extra rebase, CI and QA rounds on the others.
+7. **Review in merge order.** When several PRs are **Ready for QA**, take them by `merge-order` label: lowest number first (0 is infra/CI), then unlabeled. PRs with the same number can be taken in either order (whichever is ready first). An instruction from the maintainer overrides the labels. Merging in order keeps the up-to-date rule from forcing extra rebase, CI and QA rounds on the others.
 
 **Any push invalidates approval.** The automation handles this — any push removes QA Approved and resets to Awaiting CI.
 
