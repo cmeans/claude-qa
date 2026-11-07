@@ -21,3 +21,13 @@ The Developer counterpart is [claude-dev](https://github.com/cmeans/claude-dev) 
 ---
 
 *Part of the [Awareness](https://github.com/cmeans/mcp-awareness) ecosystem. Copyright (c) 2026 Chris Means.*
+
+## Scripts
+
+`scripts/` holds the helpers `CLAUDE.md` names. Each needs the PR's `owner/repo`, so none assumes a project, and each refuses unless the active `gh` account is the maintainer's.
+
+- `qa-start.sh <pr> <owner/repo>` adds **QA Active** if the PR's live labels allow a round.
+- `tick.sh <pr> <owner/repo> <step numbers...>` ticks QA steps in a PR's body.
+- `qa-signoff.sh <pr> <sha7> "<audit comment>" <owner/repo>` applies **Ready for QA Signoff** and notifies the maintainer through ntfy. `--test` sends one test message.
+
+The ntfy topic is read from `~/.config/claude-qa/ntfy-topic`, mode 600. It stays out of this repo: anyone with the topic can read the messages, so they hold only the repo name, a PR number and a fixed label.
