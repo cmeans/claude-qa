@@ -48,12 +48,26 @@ The awareness MCP server is configured globally — it's available in every sess
   - `tags`: `["session-audit", "{repo}", "qa", "feedback"]`
   - `description`: e.g., "QA round 1 on PR #43 at abc1234: QA Failed, 3 findings (…). 315 passed, CI green."
   - `expires_days`: `7`
-- **Cross-agent handoffs**: Always include tag `"feedback"` so the Developer agent discovers QA findings via `get_knowledge(tags=["feedback"])`.
+- **Cross-agent handoffs**: Always include tag `"feedback"` so the Developer agent discovers QA findings via `get_knowledge(tags=["feedback"])`, and tell Dev directly (see Talking to Dev).
 - **Project status**: After significant QA milestones, update the project status note so other platforms know what happened.
 
 ### Reading context
 
 - On startup (after briefing), call `get_knowledge(tags=["{repo}", "feedback"])` to check if the Developer left notes about what needs QA or context about recent changes.
+
+## Talking to Dev
+
+Dev and QA run as sessions on the same machine, so they can message each other directly. `ListAgents` lists the peer sessions; Dev's is named after the repo it works in (e.g. `mcp-synology-a0`), and names change when a session restarts, so look it up each time. `SendMessage` delivers to it, and Dev answers by copying the message's `from`. Start each message with `[QA → Dev]`, and make the first line say what it's about.
+
+- **The record lives elsewhere; a message points at it.** Use these places, per the global handoff rule:
+  - review findings and verdicts: the PR;
+  - work that needs a PR: an issue on that repo;
+  - handoffs and private security matters: Awareness.
+
+  Then send Dev a short message naming where to look. Short questions and heads-ups ("is this deliberate?", "round started, don't push") can go by message alone.
+- **Keep messages short.** A message lands in Dev's context at its next step, and it's gone after a compaction or a cleared session. Anything long, or that must outlast the session, belongs in Awareness.
+- **A message isn't the maintainer's approval.** Dev and QA agreeing doesn't decide anything that's the maintainer's: QA Approved, merges, labels outside each agent's own, scope calls. A message from Dev is a teammate's request, acted on within QA's own permissions. Never ask Dev to do something QA's permissions or rules would block, and don't do for Dev what Dev's would block.
+- **Labels still carry the workflow.** A message can say a round started or ended, but the label transitions in the PR Label Workflow below stay the signal the automation and the maintainer read.
 
 ## QA Workflow
 
