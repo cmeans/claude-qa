@@ -89,6 +89,22 @@ Dev and QA run as sessions on the same machine, so they can message each other d
 
 Repo-specific: each repo documents its own isolated QA stack in its `CLAUDE.md` or docs (e.g. mcp-awareness's `docker-compose.qa.yaml`, mcp-synology's vdsm tests). Never test against production instances or real systems unless the maintainer authorizes it. If a repo has no documented QA stack, flag that to Dev rather than improvising one.
 
+### Runs that could hang or grow
+
+Most of QA's runs are the risky kind: mutation runs, probes, a PR's suite with its new tests, runs on other dependency versions, heavy builds. **Give each its own memory and time limits.** The exception is the PR's base (`main`'s known-good suite) on the locked dependencies. The same rule is in `claude-dev`'s `CLAUDE.md` (from claude-dev#15), and the full reasoning and tests are there.
+
+```
+systemd-run --user --scope --quiet --unit=<name> -p MemoryMax=<limit> -p MemorySwapMax=0 -p RuntimeMaxSec=<secs> <command>
+```
+
+- **Why this and not the alternatives.** The limits cover the command and all its workers, and hitting one stops only that scope. `prlimit --as` is per process, so parallel test workers can still add up past it, and `timeout` can leave a detached child running. Keep `<limit>` well under the memory free now. Files on tmpfs (`/tmp` clones) count against it.
+- **How to write the command.** `<command>` is one executable: put `&&` or a pipe inside `bash -c '...'`. A variable goes before `systemd-run` or as `env FOO=1` after the options. Use a fresh `<name>` per run: a name still held by a running or failed scope exits 1 without running, which a mutation loop can misread as a killed mutant.
+- **Read `Result`, not the exit code.** 137 and 143 don't reliably say which limit was hit. Run `systemctl --user show -p Result --value <name>.scope` (`oom-kill` or `timeout`), then `systemctl --user reset-failed <name>.scope`. A scope that hit a limit by accident is a finding to report, not a run to retry without limits.
+- **On purpose:** a probe that hits a memory limit deliberately adds `-p OOMPolicy=continue`. Without it, each kill raises a false "Device memory is nearly full" alert on the maintainer's desktop.
+- **Containers aren't covered.** `podman run` escapes the scope. Give it `--memory=<limit> --memory-swap=<limit> --timeout=<secs>`. Outside contributors' code runs only in such a container (global `CLAUDE.md`): a scope limits accidents, it isn't a sandbox.
+- **A Bash tool timeout doesn't stop a command.** Claude Code moves it to the background, where it keeps running. If a run passes its usual time, stop it by PID and investigate under limits.
+- **Why it matters:** global out-of-memory kills took out Warp and every Dev and QA session in it on 2026-11-04 (a QA mutant reading `/dev/zero`, on mcp-synology #541) and 2026-11-05 (a hung run on old dependency versions).
+
 ## PR Label Workflow
 
 Labels signal handoffs between Dev, QA, and maintainer. A PR must never have conflicting labels (e.g., both QA Approved and Ready for QA).
