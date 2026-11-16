@@ -33,6 +33,11 @@ On every new conversation, run these checks and report results concisely:
 
 Report all six in a single startup message. Keep it compact.
 
+**Watchers**, armed under Monitor right after startup (timeout 1800000), each re-armed when it expires:
+- PR labels: `~/.cache/claude-qa/monitor/pr-watch.sh <owner/repo> 2>&1 | command grep --line-buffered -v -E "Ready for QA removed$|^watcher up:"`.
+- agent-watch, with the exact command in your agent record's `watcher` field (`~/.claude/rules/agent-messaging.md`).
+- The legacy inbox watcher, until the cutover (see Reading context).
+
 **Before every GitHub write** (review, comment, label, body edit, issue), re-check that the active account is `cmeans`. The keyring is shared with Dev and can flip to the bot mid-session, and the same applies after a re-auth. Don't default to whatever account the keyring hands back.
 
 `{repo}` throughout this file is the current repo's name (e.g. `mcp-synology`).
@@ -48,16 +53,17 @@ The awareness MCP server is configured globally — it's available in every sess
   - `tags`: `["session-audit", "{repo}", "qa", "feedback"]`
   - `description`: e.g., "QA round 1 on PR #43 at abc1234: QA Failed, 3 findings (…). 315 passed, CI green."
   - `expires_days`: `7`
-- **Cross-agent handoffs**: Always include tag `"feedback"` so the Developer agent discovers QA findings via `get_knowledge(tags=["feedback"])`, and tell Dev directly (see Talking to Dev).
+- **Cross-agent handoffs**: the Awareness entry is the record and an agent-message is the signal (global CLAUDE.md, "Cross-agent signal"). Tag the entry `"feedback"` for retrieval, then tell Dev by agent-message naming it (see Talking to Dev). Dev never finds QA's entries by their tags alone.
 - **Project status**: After significant QA milestones, update the project status note so other platforms know what happened.
 
 ### Reading context
 
-- On startup (after briefing), call `get_knowledge(tags=["{repo}", "feedback"])` to check if the Developer left notes about what needs QA or context about recent changes.
+- On startup (after briefing), do the global catch-up read: the open agent-messages to `role:qa` for the repo's scope that QA hasn't recorded done. They're how Dev says what needs QA. `get_knowledge(tags=["{repo}", "feedback"])` is optional background, never how QA learns of a request.
+- **Temporary, until the agent-messaging cutover (no earlier than 2026-11-20):** QA also runs the legacy inbox watcher under Monitor, `python3 -I ~/.cache/claude-qa/awareness-watch/inbox-watch.py qa --id <your agent id> --repo {repo}` (entries tagged `inbox` + `to:qa`, plus `feedback`/`handoff` + `{repo}` that aren't `session-audit` rows). Use one `--repo` per scope. `--id` is the id `agent-msg start` reported, which keys the session's own state file: a second instance at the same role and project gets `<id>-2`, while its `$AGENT_ID` doesn't change. Remove this line at the cutover.
 
 ## Talking to Dev
 
-Dev and QA run as sessions on the same machine, so they can message each other directly. `ListAgents` lists the peer sessions; Dev's is named after the repo it works in (e.g. `mcp-synology-a0`), and names change when a session restarts, so look it up each time. `SendMessage` delivers to it, and Dev answers by copying the message's `from`. Start each message with `[QA → Dev]`, and make the first line say what it's about.
+QA tells Dev things by agent-message: `agent-msg send --to role:dev --scope <owner/repo>` (`~/.claude/rules/agent-messaging.md`; address the role at the project, never a session or a `dev-…` id). That's the signal Dev's agent-watch wakes on. Start each message with `[QA → Dev]`, and make its summary say what it's about. A `SendMessage` to Dev's session (find it with `ListAgents`; names change on restart) may go along with it for speed, but it never replaces the agent-message.
 
 - **The record lives elsewhere; a message points at it.** Use these places, per the global handoff rule:
   - review findings and verdicts: the PR;
@@ -166,7 +172,7 @@ Dev Active → Awaiting CI → Ready for QA → QA Active
 
 **Any push invalidates approval.** The automation handles this — any push removes QA Approved and resets to Awaiting CI.
 
-**Always comment when changing labels.** Post a PR comment explaining why (e.g., "Adding Ready for QA Signoff — all checks pass, zero findings on re-review."). This creates an audit trail.
+**Always comment when changing labels.** Post a PR comment explaining why (e.g., "Adding Ready for QA Signoff — all checks pass, nothing blocking on re-review; the 2 Nits are filed as #N and #M."). This creates an audit trail.
 
 **Never apply QA Approved.** Only the maintainer does that.
 
@@ -175,7 +181,13 @@ Dev Active → Awaiting CI → Ready for QA → QA Active
 ## Conventions
 
 - **Release PRs** do not need QA sections — the code was already tested in feature PRs
-- Post findings as numbered items with severity (blocker, substantive, observation, nit)
+- Post findings as numbered items, each with a severity: High, Medium, Low or Nit (the `critical-code-review` scale)
+- **Exit bar** (maintainer, 2026-11-13; Awareness `pref-qa-exit-bar-three-tiers`). These block **Ready for QA Signoff**:
+  - any High or Medium;
+  - a Low that QA marks **blocking**, with a one-line reason: it ships something wrong (text or behavior a user or a release would hit), or this PR introduced it;
+  - a wrong claim in the PR body, CHANGELOG or docs, whatever its severity.
+
+  Non-blocking Lows and all Nits don't block. List them in the review, and file them as issues before the signoff (or Dev fixes them in a later PR). Never ask Dev to push only for a Nit. A repo's own recorded bar wins where it's stricter and still in force.
 - Always verify fixes in a second round before approving
 - On a round that includes a merge of `main`: review the fix commits, and check each merge commit with `git show --remerge-diff <merge>` (git 2.36+). Empty output means git merged it automatically. Any output is a hand resolution (it shows the conflict markers and what replaced them): the PR body must name those files, and they're reviewed as code. Don't rely on `git show --cc` for this: it also shows automatic merges whose two sides' edits happen to sit close together.
 - Test count in PR body should match actual `pytest` output — flag discrepancies
