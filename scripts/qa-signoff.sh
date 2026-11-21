@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # usage: qa-signoff.sh <pr> <sha7> "<audit comment>" <owner/repo>  -- final act of a passing round.
 #        qa-signoff.sh --test                                -- send one test notification only.
-# Checks the live head, labels and CI, posts the audit comment, moves QA Active to
+# Checks the live head, labels, CI and QA checkboxes (none unticked, except step numbers
+# listed in QA_UNTICKED_OK), posts the audit comment, moves QA Active to
 # Ready for QA Signoff, then notifies through ntfy. Exit 0 = done, 1 = refused, nothing changed
 # on the label, 3 = labeled, but the notification failed: tell the maintainer.
 # Message text is the repo name, PR number and label only: never a PR title, which is untrusted text.
@@ -31,6 +32,16 @@ state=$(gh pr view "$pr" --repo "$repo" --json state,headRefOid,mergeable,labels
   --jq '"\(.state)|\(.mergeable)|\(.headRefOid[0:7])|" + ([.labels[].name] | join(","))')
 IFS='|' read -r st mergeable head labels <<<"$state"
 has() { case ",$labels," in *",$1,"*) return 0;; *) return 1;; esac; }
+# Step numbers of unticked QA boxes ("N. - [ ]") in the live body, minus any in
+# QA_UNTICKED_OK (space-separated step numbers left open on purpose, e.g. a step for Muse).
+unticked() {
+  local n out=""
+  for n in $(gh pr view "$pr" --repo "$repo" --json body --jq .body \
+               | tr -d '\r' | sed -nE 's/^([0-9]+)\. - \[ \].*/\1/p'); do
+    case " ${QA_UNTICKED_OK:-} " in *" $n "*) ;; *) out="${out:+$out }$n";; esac
+  done
+  echo "$out"
+}
 why=""
 [ "$st" = OPEN ] || why="state is $st"
 [ "$head" = "$sha" ] || why="${why:+$why; }head is $head, not $sha"
@@ -41,6 +52,8 @@ done
 [ "$mergeable" != CONFLICTING ] || why="${why:+$why; }merge conflict"
 bad=$(gh pr checks "$pr" --repo "$repo" | cut -f1,2 | grep -vE '\b(pass|skipping)$' | grep -vE '^(QA Gate|on-label|qa-approved)\s' || true)
 [ -z "$bad" ] || why="${why:+$why; }CI not green: $(echo "$bad" | tr '\n' ';')"
+open=$(unticked)
+[ -z "$open" ] || why="${why:+$why; }unticked QA steps: $open"
 [ -z "$why" ] || { echo "REFUSED #$pr at $head: $why [labels: $labels]"; exit 1; }
 
 gh pr comment "$pr" --repo "$repo" --body "$comment" >/dev/null
@@ -53,6 +66,8 @@ case "$again" in
   "$sha|"*QA\ Active*) ;;
   *) echo "REFUSED before the label: $again (the audit comment is already posted)"; exit 1;;
 esac
+open=$(unticked)
+[ -z "$open" ] || { echo "REFUSED before the label: unticked QA steps $open (the audit comment is already posted)"; exit 1; }
 gh pr edit "$pr" --repo "$repo" --remove-label "QA Active" --add-label "Ready for QA Signoff" >/dev/null
 echo "LABELED #$pr at $sha"
 
